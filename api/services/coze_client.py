@@ -70,8 +70,6 @@ class CozeClient:
         Returns:
             str: AI回复内容
         """
-        import requests
-
         logger.info(f"用户[{user_id}]消息: {user_input}")
 
         try:
