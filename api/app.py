@@ -5,23 +5,40 @@ Flask Webhook服务
 """
 from flask import Flask, request, Response
 import os
+import sys
+
+# 添加当前目录到Python路径
+sys.path.insert(0, os.path.dirname(__file__))
 
 # 导入配置和工具
 from utils.crypto import WeixinCrypto
 from services.coze_client import CozeClient
 from config import config
 
+print("=" * 50)
+print("正在启动Flask应用...")
+print(f"Python版本: {sys.version}")
+print(f"工作目录: {os.getcwd()}")
+print(f"Python路径: {sys.path[:3]}")
+print("=" * 50)
+
 app = Flask(__name__)
 
-# 创建加密工具
+# 验证环境变量
+if not config.validate():
+    print("警告: 部分环境变量未配置，服务可能无法正常工作")
+
+# 创建加密工具（延迟创建，确保配置已加载）
 crypto = WeixinCrypto(
-    token=config.WEIXIN_TOKEN,
-    encoding_aes_key=config.WEIXIN_ENCODING_AES_KEY,
-    app_id=config.WEIXIN_APP_ID
+    token=config.WEIXIN_TOKEN or "default_token",
+    encoding_aes_key=config.WEIXIN_ENCODING_AES_KEY or "default_key",
+    app_id=config.WEIXIN_APP_ID or "default_app_id"
 )
 
-# 创建扣子客户端
+# 创建扣子客户端（延迟创建）
 coze = CozeClient()
+
+print("✓ Flask应用启动成功")
 
 
 @app.route("/")
@@ -46,9 +63,13 @@ def verify_weixin():
     nonce = request.args.get("nonce")
     echostr = request.args.get("echostr")
 
+    print(f"[GET] 收到验证请求: echostr={echostr}")
+
     if crypto.verify_token(signature, timestamp, nonce):
+        print("[GET] 验证成功")
         return Response(echostr, mimetype="text/plain")
     else:
+        print("[GET] 验证失败")
         return Response("Verification failed", status=403)
 
 
@@ -59,22 +80,37 @@ def handle_weixin_message():
     """
     import xml.etree.ElementTree as ET
 
+    print("[POST] 收到微信消息")
+
     try:
         body = request.get_data(as_text=True)
+        print(f"[POST] 消息长度: {len(body)}")
+
         root = ET.fromstring(body)
         msg_type = root.find("MsgType").text
         from_user = root.find("FromUserName").text
 
+        print(f"[POST] 消息类型: {msg_type}, 发送者: {from_user}")
+
         if msg_type == "text":
             user_input = root.find("Content").text
+            print(f"[POST] 用户消息: {user_input}")
+
             # 调用扣子API
-            response = coze.call_chat(user_input, from_user)
+            try:
+                print("[POST] 调用扣子API...")
+                response = coze.call_chat(user_input, from_user)
+                print(f"[POST] 扣子响应: {response}")
+            except Exception as e:
+                print(f"[POST] 扣子API调用失败: {e}")
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"[POST] 处理消息错误: {e}")
+        import traceback
+        traceback.print_exc()
 
     return Response("success", mimetype="text/plain")
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8000, debug=True)
