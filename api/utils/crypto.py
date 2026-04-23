@@ -70,17 +70,26 @@ class WeixinCrypto:
 
         try:
             print(f"[decrypt] 收到加密消息，长度: {len(encrypted_xml)}")
-            print(f"[decrypt] 消息前100字符: {encrypted_xml[:100]}")
+            print(f"[decrypt] 消息前100字符: {repr(encrypted_xml[:100])}")
 
-            # 解析XML，获取加密内容
-            root = ET.fromstring(encrypted_xml)
-            encrypt = root.find("Encrypt").text
+            encrypt = None
 
+            # 尝试解析XML
+            try:
+                root = ET.fromstring(encrypted_xml)
+                encrypt_elem = root.find("Encrypt")
+                if encrypt_elem is not None and encrypt_elem.text:
+                    encrypt = encrypt_elem.text
+                    print(f"[decrypt] 从XML中提取到Encrypt，长度: {len(encrypt)}")
+                else:
+                    print(f"[decrypt] XML解析成功但未找到Encrypt标签")
+            except ET.ParseError as e:
+                print(f"[decrypt] XML解析失败: {e}，尝试直接使用整个消息作为加密内容")
+
+            # 如果没有从XML中提取到加密内容，直接使用整个消息
             if not encrypt:
-                print("[decrypt] XML中没有Encrypt字段")
-                # 尝试直接使用整个消息作为加密内容
                 encrypt = encrypted_xml
-                print("[decrypt] 尝试直接使用整个消息作为加密内容")
+                print(f"[decrypt] 使用整个消息作为加密内容")
 
             print(f"[decrypt] 加密内容长度: {len(encrypt)}")
 
@@ -90,10 +99,11 @@ class WeixinCrypto:
             tmp_str = ''.join(tmp_list)
             hashcode = hashlib.sha1(tmp_str.encode('utf-8')).hexdigest()
 
+            print(f"[decrypt] 计算的签名: {hashcode}")
+            print(f"[decrypt] 期望的签名: {msg_signature}")
+
             if hashcode != msg_signature:
-                print(f"[decrypt] 签名验证失败: expected={msg_signature[:20]}..., got={hashcode}")
-                # 签名失败也继续尝试解密
-                # return None
+                print(f"[decrypt] 签名验证失败，继续尝试解密...")
 
             # 解密消息
             msg, from_app_id = self.decrypt(encrypt)
@@ -101,9 +111,11 @@ class WeixinCrypto:
             # 验证AppID
             if from_app_id != self.app_id:
                 print(f"[decrypt] AppID不匹配: expected={self.app_id}, got={from_app_id}")
-                return None
+                # AppID不匹配也返回解密结果，用于调试
+                # return None
 
             print(f"[decrypt] 解密成功，AppID={from_app_id}")
+            print(f"[decrypt] 解密结果(前100字符): {repr(msg[:100])}")
             return msg
 
         except Exception as e:

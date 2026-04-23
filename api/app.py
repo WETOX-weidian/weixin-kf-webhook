@@ -94,7 +94,7 @@ def handle_weixin_message():
     try:
         body = request.get_data(as_text=True)
         print(f"[POST] 消息长度: {len(body)}")
-        print(f"[POST] 消息内容(前200字符): {body[:200]}")
+        print(f"[POST] 消息内容(前200字符): {repr(body[:200])}")
 
         # 检查是否为加密消息
         encrypt_type = request.args.get("encrypt_type", "")
@@ -102,13 +102,13 @@ def handle_weixin_message():
         timestamp = request.args.get("timestamp", "")
         nonce = request.args.get("nonce", "")
 
-        print(f"[POST] encrypt_type={encrypt_type}, msg_signature={msg_signature[:20]}...")
+        print(f"[POST] encrypt_type={encrypt_type}")
 
         # 如果是加密消息，先解密
         if encrypt_type == "aes":
             print("[POST] 检测到加密消息，开始解密...")
             try:
-                # 解密消息
+                # 直接解密整个body（微信可能直接发送加密内容）
                 decrypted_xml = crypto.decrypt_message(body, msg_signature, timestamp, nonce)
                 if not decrypted_xml:
                     print("[POST] 解密失败")
@@ -123,7 +123,13 @@ def handle_weixin_message():
                 return Response("success", mimetype="text/plain")
 
         # 解析XML
-        root = ET.fromstring(body)
+        try:
+            root = ET.fromstring(body)
+        except ET.ParseError as e:
+            print(f"[POST] XML解析失败: {e}")
+            print(f"[POST] body内容: {body[:500]}")
+            return Response("success", mimetype="text/plain")
+
         msg_type = root.find("MsgType").text
         from_user = root.find("FromUserName").text
 
