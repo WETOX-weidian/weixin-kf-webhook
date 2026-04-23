@@ -94,12 +94,15 @@ def handle_weixin_message():
     try:
         body = request.get_data(as_text=True)
         print(f"[POST] 消息长度: {len(body)}")
+        print(f"[POST] 消息内容(前200字符): {body[:200]}")
 
         # 检查是否为加密消息
         encrypt_type = request.args.get("encrypt_type", "")
         msg_signature = request.args.get("msg_signature", "")
         timestamp = request.args.get("timestamp", "")
         nonce = request.args.get("nonce", "")
+
+        print(f"[POST] encrypt_type={encrypt_type}, msg_signature={msg_signature[:20]}...")
 
         # 如果是加密消息，先解密
         if encrypt_type == "aes":
