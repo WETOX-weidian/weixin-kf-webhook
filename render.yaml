@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: weixin-webhook
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api.app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    envVars:
+      - key: WEIXIN_TOKEN
+        value: GcFWzYhV0y8ktQuW
+      - key: WEIXIN_ENCODING_AES_KEY
+        value: Zj4JlbGom1eR8hNWPRJLi25YIS6UBTD551cyfq9n5In
+      - key: WEIXIN_APP_ID
+        value: wx6d76fe7674ec5657
+      - key: WEIXIN_APP_SECRET
+        value: e0ed88e6b89e4e1319dc220223b3096b
+      - key: COZE_API_URL
+        value: https://api.coze.cn/v3/chat
+      - key: COZE_API_KEY
+        value: sat_nrzdj4hNjQZeG7xA4ukFp0hQQtIqb1qnyPJY9hpz8LXVJltxQhQQDsqfUubbVOGv
+      - key: COZE_BOT_ID
+        value: 7631814381948420148
