@@ -93,19 +93,17 @@ def verify_weixin():
 @app.route("/webhook/weixin", methods=["POST"])
 def handle_weixin_message():
     """
-    处理微信消息（被动回复模式）
+    处理微信消息（异步模式）
+    微信小店客服消息必须5秒内返回success，不能使用被动回复
     """
     import xml.etree.ElementTree as ET
-    import time
-    import random
-    import string
+    import threading
 
     print("[POST] 收到微信消息")
 
     try:
         body = request.get_data(as_text=True)
         print(f"[POST] 消息长度: {len(body)}")
-        print(f"[POST] 消息内容(前200字符): {repr(body[:200])}")
 
         # 检查是否为加密消息
         encrypt_type = request.args.get("encrypt_type", "")
@@ -113,19 +111,16 @@ def handle_weixin_message():
         timestamp = request.args.get("timestamp", "")
         nonce = request.args.get("nonce", "")
 
-        print(f"[POST] encrypt_type={encrypt_type}")
-
         # 如果是加密消息，先解密
         if encrypt_type == "aes":
             print("[POST] 检测到加密消息，开始解密...")
             try:
-                # 直接解密整个body（微信可能直接发送加密内容）
                 decrypted_xml = crypto.decrypt_message(body, msg_signature, timestamp, nonce)
                 if not decrypted_xml:
                     print("[POST] 解密失败")
                     return Response("success", mimetype="text/plain")
 
-                print(f"[POST] 解密成功: {decrypted_xml[:200]}...")
+                print(f"[POST] 解密成功")
                 body = decrypted_xml
             except Exception as e:
                 print(f"[POST] 解密异常: {e}")
@@ -133,7 +128,7 @@ def handle_weixin_message():
                 traceback.print_exc()
                 return Response("success", mimetype="text/plain")
 
-        # 解析消息（可能是XML或JSON）
+        # 解析消息
         msg_type = None
         from_user = None
         to_user = None
@@ -141,7 +136,7 @@ def handle_weixin_message():
 
         print(f"[POST] 准备解析消息，body是否以{{开头: {body.strip().startswith('{')}")
 
-        # 尝试1: 解析为JSON（微信客服消息）
+        # 尝试解析为JSON（微信客服消息）
         try:
             import json
             if body.strip().startswith('{'):
@@ -158,9 +153,9 @@ def handle_weixin_message():
                     user_input = text_info.get('content', '')
                     print(f"[POST] 检测到客服事件消息，内容: {user_input}")
         except json.JSONDecodeError as e:
-            print(f"[POST] JSON解析失败: {e}, 尝试XML格式...")
+            print(f"[POST] JSON解析失败: {e}")
 
-        # 尝试2: 解析为XML（普通公众号消息）
+        # 尝试解析为XML（普通公众号消息）
         if not user_input:
             try:
                 root = ET.fromstring(body)
@@ -173,61 +168,53 @@ def handle_weixin_message():
                     print(f"[POST] 检测到普通文本消息")
             except ET.ParseError as e:
                 print(f"[POST] XML解析失败: {e}")
-                print(f"[POST] body内容: {body[:500]}")
-                return Response("success", mimetype="text/plain")
 
         print(f"[POST] 消息类型: {msg_type}, 发送者: {from_user}")
 
+        # 如果是文本消息，异步处理
         if msg_type == "text" and user_input:
             print(f"[POST] 用户消息: {user_input}")
+            print(f"[POST] 使用异步模式处理，立即返回success")
 
-            # 调用扣子API获取AI回复
-            try:
-                print("[POST] 调用扣子API...")
-                ai_response = coze.call_chat(user_input, from_user)
-                print(f"[POST] 扣子响应: {ai_response}")
+            # 异步处理函数
+            def async_process():
+                try:
+                    print(f"[ASYNC] 开始异步处理消息...")
+                    print(f"[ASYNC] 调用扣子API...")
 
-                if ai_response:
-                    # 使用被动回复模式：构造XML响应
-                    print(f"[POST] 使用被动回复模式发送消息")
+                    # 调用AI获取回复
+                    ai_response = coze.call_chat(user_input, from_user)
+                    print(f"[ASYNC] 扣子响应: {ai_response}")
 
-                    # 构造回复XML
-                    reply_xml = f"""<xml>
-<ToUserName><![CDATA[{from_user}]]></ToUserName>
-<FromUserName><![CDATA[{to_user}]]></FromUserName>
-<CreateTime>{int(time.time())}</CreateTime>
-<MsgType><![CDATA[text]]></MsgType>
-<Content><![CDATA[{ai_response}]]></Content>
-</xml>"""
-
-                    print(f"[POST] 回复XML: {reply_xml[:200]}...")
-
-                    # 如果是加密模式，需要加密响应
-                    if encrypt_type == "aes":
-                        # 生成新的时间戳和随机数
-                        new_timestamp = str(int(time.time()))
-                        new_nonce = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(16))
-
-                        # 加密消息
-                        encrypted_response = crypto.encrypt_message(reply_xml, new_timestamp, new_nonce)
-                        print(f"[POST] 加密响应: {encrypted_response[:200]}...")
-                        return Response(encrypted_response, mimetype="application/xml")
+                    if ai_response:
+                        # 尝试发送客服消息
+                        print(f"[ASYNC] 尝试发送客服消息...")
+                        success = weixin_message.send_text(from_user, ai_response)
+                        if success:
+                            print(f"[ASYNC] ✅ 客服消息发送成功！")
+                        else:
+                            print(f"[ASYNC] ❌ 客服消息发送失败")
                     else:
-                        # 明文模式，直接返回XML
-                        return Response(reply_xml, mimetype="application/xml")
-                else:
-                    print("[POST] AI响应为空，返回success")
-            except Exception as e:
-                print(f"[POST] 扣子API调用失败: {e}")
-                import traceback
-                traceback.print_exc()
+                        print(f"[ASYNC] ❌ AI响应为空")
+                except Exception as e:
+                    print(f"[ASYNC] 异步处理失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            # 启动异步线程
+            thread = threading.Thread(target=async_process)
+            thread.daemon = True
+            thread.start()
+
+        else:
+            print(f"[POST] 非文本消息或用户输入为空，直接返回success")
 
     except Exception as e:
         print(f"[POST] 处理消息错误: {e}")
         import traceback
         traceback.print_exc()
 
-    # 返回success（如果无法发送被动回复）
+    # 微信小店客服消息必须立即返回success（5秒内）
     return Response("success", mimetype="text/plain")
 
 
