@@ -122,21 +122,46 @@ def handle_weixin_message():
                 traceback.print_exc()
                 return Response("success", mimetype="text/plain")
 
-        # 解析XML
-        try:
-            root = ET.fromstring(body)
-        except ET.ParseError as e:
-            print(f"[POST] XML解析失败: {e}")
-            print(f"[POST] body内容: {body[:500]}")
-            return Response("success", mimetype="text/plain")
+        # 解析消息（可能是XML或JSON）
+        msg_type = None
+        from_user = None
+        user_input = None
 
-        msg_type = root.find("MsgType").text
-        from_user = root.find("FromUserName").text
+        # 尝试1: 解析为JSON（微信客服消息）
+        try:
+            import json
+            if body.strip().startswith('{'):
+                print("[POST] 尝试解析JSON格式...")
+                json_data = json.loads(body)
+
+                # 处理客服事件消息
+                if json_data.get('MsgType') == 'event' and json_data.get('Event') == 'commkf_send_msg_to_kf':
+                    msg_type = 'text'
+                    from_user = json_data.get('FromUserName')
+                    text_info = json_data.get('text', {})
+                    user_input = text_info.get('content', '')
+                    print(f"[POST] 检测到客服事件消息，内容: {user_input}")
+        except json.JSONDecodeError:
+            print("[POST] JSON解析失败，尝试XML格式...")
+
+        # 尝试2: 解析为XML（普通公众号消息）
+        if not user_input:
+            try:
+                root = ET.fromstring(body)
+                msg_type = root.find("MsgType").text
+                from_user = root.find("FromUserName").text
+
+                if msg_type == "text":
+                    user_input = root.find("Content").text
+                    print(f"[POST] 检测到普通文本消息")
+            except ET.ParseError as e:
+                print(f"[POST] XML解析失败: {e}")
+                print(f"[POST] body内容: {body[:500]}")
+                return Response("success", mimetype="text/plain")
 
         print(f"[POST] 消息类型: {msg_type}, 发送者: {from_user}")
 
-        if msg_type == "text":
-            user_input = root.find("Content").text
+        if msg_type == "text" and user_input:
             print(f"[POST] 用户消息: {user_input}")
 
             # 调用扣子API
