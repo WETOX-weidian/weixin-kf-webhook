@@ -53,6 +53,56 @@ class WeixinCrypto:
         # 验证
         return hashcode == signature
 
+    def decrypt_message(self, encrypted_xml: str, msg_signature: str, timestamp: str, nonce: str) -> str:
+        """
+        解密微信加密消息
+
+        Args:
+            encrypted_xml: 加密的XML
+            msg_signature: 消息签名
+            timestamp: 时间戳
+            nonce: 随机数
+
+        Returns:
+            解密后的XML内容
+        """
+        import xml.etree.ElementTree as ET
+
+        try:
+            # 解析XML，获取加密内容
+            root = ET.fromstring(encrypted_xml)
+            encrypt = root.find("Encrypt").text
+            if not encrypt:
+                print("[decrypt] XML中没有Encrypt字段")
+                return None
+
+            # 验证签名
+            tmp_list = [self.token, timestamp, nonce, encrypt]
+            tmp_list.sort()
+            tmp_str = ''.join(tmp_list)
+            hashcode = hashlib.sha1(tmp_str.encode('utf-8')).hexdigest()
+
+            if hashcode != msg_signature:
+                print(f"[decrypt] 签名验证失败: expected={msg_signature}, got={hashcode}")
+                return None
+
+            # 解密消息
+            msg, from_app_id = self.decrypt(encrypt)
+
+            # 验证AppID
+            if from_app_id != self.app_id:
+                print(f"[decrypt] AppID不匹配: expected={self.app_id}, got={from_app_id}")
+                return None
+
+            print(f"[decrypt] 解密成功，AppID={from_app_id}")
+            return msg
+
+        except Exception as e:
+            print(f"[decrypt] 解密异常: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
     def decrypt(self, encrypted_msg: str) -> Tuple[str, str]:
         """
         解密消息
