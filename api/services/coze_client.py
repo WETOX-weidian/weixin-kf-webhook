@@ -65,7 +65,6 @@ class CozeClient:
         # 发送请求
         try:
             with httpx.Client(timeout=self.timeout) as client:
-                # 使用不同的Authorization header格式
                 response = client.post(
                     self.api_url,
                     json=payload,
@@ -82,6 +81,11 @@ class CozeClient:
                 if result.get("code") != 0:
                     error_msg = result.get("msg", "未知错误")
                     logger.error(f"❌ 扣子API返回错误: code={result.get('code')}, msg={error_msg}")
+
+                    # 特殊处理Token错误
+                    if result.get("code") == 4101:
+                        return "抱歉，AI服务认证失败，请联系管理员配置OAuth2"
+
                     return f"抱歉，AI服务错误: {error_msg}"
 
                 # 解析响应，提取AI回复内容
