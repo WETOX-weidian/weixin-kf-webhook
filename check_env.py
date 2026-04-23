@@ -6,6 +6,12 @@
 """
 import sys
 import os
+from dotenv import load_dotenv
+
+# 加载.env文件（本地测试）
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(env_path):
+    load_dotenv(env_path)
 
 # 添加当前目录到Python路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'api'))
