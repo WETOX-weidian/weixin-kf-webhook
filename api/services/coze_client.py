@@ -17,19 +17,19 @@ class CozeClient:
         self.api_url = os.getenv("COZE_API_URL", "https://api.coze.cn/v3/chat")
         self.api_key = os.getenv("COZE_API_KEY", "")
         self.bot_id = os.getenv("COZE_BOT_ID", "")
-        self.timeout = 15  # 15秒超时
+        self.timeout = 30  # 30秒超时
 
         if not all([self.api_url, self.api_key, self.bot_id]):
             logger.warning("⚠️  扣子API配置不完整")
 
-    async def call_chat(
+    def call_chat(
         self,
         user_input: str,
         user_id: str,
         additional_messages: Optional[list] = None
-    ) -> Dict[str, Any]:
+    ) -> str:
         """
-        调用扣子 Bot Chat API
+        调用扣子 Bot Chat API（同步方法）
 
         Args:
             user_input: 用户输入
@@ -37,10 +37,11 @@ class CozeClient:
             additional_messages: 额外的历史消息
 
         Returns:
-            响应结果
+            str: AI回复内容
         """
         if not all([self.api_url, self.api_key, self.bot_id]):
-            raise ValueError("扣子API配置不完整")
+            logger.error("扣子API配置不完整")
+            return "抱歉，服务配置错误"
 
         # 构建消息列表
         messages = []
@@ -66,9 +67,9 @@ class CozeClient:
         }
 
         # 发送请求
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            try:
-                response = await client.post(
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                response = client.post(
                     self.api_url,
                     json=payload,
                     headers={
@@ -79,17 +80,27 @@ class CozeClient:
                 response.raise_for_status()
                 result = response.json()
 
-                logger.info(f"✅ 扣子API调用成功: conversation_id={result.get('conversation_id')}")
+                logger.info(f"✅ 扣子API调用成功")
 
-                return result
+                # 解析响应，提取AI回复内容
+                if "data" in result and "answer" in result["data"]:
+                    return result["data"]["answer"]
+                elif "messages" in result and len(result["messages"]) > 0:
+                    # 尝试从消息列表中获取最后的助手回复
+                    for msg in reversed(result["messages"]):
+                        if msg.get("role") == "assistant" and msg.get("content"):
+                            return msg.get("content")
+                
+                logger.warning(f"扣子API返回格式异常: {result}")
+                return "抱歉，AI回复格式错误"
 
-            except httpx.HTTPError as e:
-                logger.error(f"❌ 扣子API调用失败: {e}")
-                raise
+        except httpx.HTTPError as e:
+            logger.error(f"❌ 扣子API调用失败: {e}")
+            return f"抱歉，调用AI服务失败: {str(e)}"
 
-            except Exception as e:
-                logger.error(f"❌ 扣子API处理失败: {e}")
-                raise
+        except Exception as e:
+            logger.error(f"❌ 扣子API处理失败: {e}")
+            return f"抱歉，服务异常: {str(e)}"
 
 
 # 全局单例

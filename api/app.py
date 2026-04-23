@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 # 导入配置和工具
 from utils.crypto import WeixinCrypto
 from services.coze_client import CozeClient
+from services.weixin_message import weixin_message
 from config import config
 
 print("=" * 50)
@@ -109,8 +110,19 @@ def handle_weixin_message():
                 print("[POST] 调用扣子API...")
                 response = coze.call_chat(user_input, from_user)
                 print(f"[POST] 扣子响应: {response}")
+
+                # 发送客服消息回微信
+                if response:
+                    print(f"[POST] 发送客服消息到微信: {response[:100]}...")
+                    success = weixin_message.send_text(from_user, response)
+                    if success:
+                        print("[POST] 客服消息发送成功")
+                    else:
+                        print("[POST] 客服消息发送失败")
             except Exception as e:
                 print(f"[POST] 扣子API调用失败: {e}")
+                import traceback
+                traceback.print_exc()
 
     except Exception as e:
         print(f"[POST] 处理消息错误: {e}")
