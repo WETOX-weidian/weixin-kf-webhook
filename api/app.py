@@ -93,9 +93,12 @@ def verify_weixin():
 @app.route("/webhook/weixin", methods=["POST"])
 def handle_weixin_message():
     """
-    处理微信消息
+    处理微信消息（被动回复模式）
     """
     import xml.etree.ElementTree as ET
+    import time
+    import random
+    import string
 
     print("[POST] 收到微信消息")
 
@@ -133,6 +136,7 @@ def handle_weixin_message():
         # 解析消息（可能是XML或JSON）
         msg_type = None
         from_user = None
+        to_user = None
         user_input = None
 
         print(f"[POST] 准备解析消息，body是否以{{开头: {body.strip().startswith('{')}")
@@ -149,6 +153,7 @@ def handle_weixin_message():
                 if json_data.get('MsgType') == 'event' and json_data.get('Event') == 'commkf_send_msg_to_kf':
                     msg_type = 'text'
                     from_user = json_data.get('FromUserName')
+                    to_user = json_data.get('ToUserName')
                     text_info = json_data.get('text', {})
                     user_input = text_info.get('content', '')
                     print(f"[POST] 检测到客服事件消息，内容: {user_input}")
@@ -161,6 +166,7 @@ def handle_weixin_message():
                 root = ET.fromstring(body)
                 msg_type = root.find("MsgType").text
                 from_user = root.find("FromUserName").text
+                to_user = root.find("ToUserName").text
 
                 if msg_type == "text":
                     user_input = root.find("Content").text
@@ -175,20 +181,42 @@ def handle_weixin_message():
         if msg_type == "text" and user_input:
             print(f"[POST] 用户消息: {user_input}")
 
-            # 调用扣子API
+            # 调用扣子API获取AI回复
             try:
                 print("[POST] 调用扣子API...")
-                response = coze.call_chat(user_input, from_user)
-                print(f"[POST] 扣子响应: {response}")
+                ai_response = coze.call_chat(user_input, from_user)
+                print(f"[POST] 扣子响应: {ai_response}")
 
-                # 发送客服消息回微信
-                if response:
-                    print(f"[POST] 发送客服消息到微信: {response[:100]}...")
-                    success = weixin_message.send_text(from_user, response)
-                    if success:
-                        print("[POST] 客服消息发送成功")
+                if ai_response:
+                    # 使用被动回复模式：构造XML响应
+                    print(f"[POST] 使用被动回复模式发送消息")
+
+                    # 构造回复XML
+                    reply_xml = f"""<xml>
+<ToUserName><![CDATA[{from_user}]]></ToUserName>
+<FromUserName><![CDATA[{to_user}]]></FromUserName>
+<CreateTime>{int(time.time())}</CreateTime>
+<MsgType><![CDATA[text]]></MsgType>
+<Content><![CDATA[{ai_response}]]></Content>
+</xml>"""
+
+                    print(f"[POST] 回复XML: {reply_xml[:200]}...")
+
+                    # 如果是加密模式，需要加密响应
+                    if encrypt_type == "aes":
+                        # 生成新的时间戳和随机数
+                        new_timestamp = str(int(time.time()))
+                        new_nonce = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(16))
+
+                        # 加密消息
+                        encrypted_response = crypto.encrypt_message(reply_xml, new_timestamp, new_nonce)
+                        print(f"[POST] 加密响应: {encrypted_response[:200]}...")
+                        return Response(encrypted_response, mimetype="application/xml")
                     else:
-                        print("[POST] 客服消息发送失败")
+                        # 明文模式，直接返回XML
+                        return Response(reply_xml, mimetype="application/xml")
+                else:
+                    print("[POST] AI响应为空，返回success")
             except Exception as e:
                 print(f"[POST] 扣子API调用失败: {e}")
                 import traceback
@@ -199,6 +227,7 @@ def handle_weixin_message():
         import traceback
         traceback.print_exc()
 
+    # 返回success（如果无法发送被动回复）
     return Response("success", mimetype="text/plain")
 
 

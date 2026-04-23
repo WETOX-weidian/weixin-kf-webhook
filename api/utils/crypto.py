@@ -212,3 +212,36 @@ class WeixinCrypto:
 
         # Base64编码
         return base64.b64encode(encrypted).decode('utf-8')
+
+    def encrypt_message(self, msg: str, timestamp: str, nonce: str) -> str:
+        """
+        加密消息（用于被动回复）
+
+        Args:
+            msg: 要加密的消息（XML格式）
+            timestamp: 时间戳
+            nonce: 随机数
+
+        Returns:
+            加密后的XML消息
+        """
+        import xml.etree.ElementTree as ET
+
+        # 加密消息内容
+        encrypted_msg = self.encrypt(msg)
+
+        # 计算签名
+        tmp_list = [self.token, timestamp, nonce, encrypted_msg]
+        tmp_list.sort()
+        tmp_str = ''.join(tmp_list)
+        signature = hashlib.sha1(tmp_str.encode('utf-8')).hexdigest()
+
+        # 构造加密的XML响应
+        response_xml = f"""<xml>
+<Encrypt><![CDATA[{encrypted_msg}]]></Encrypt>
+<MsgSignature><![CDATA[{signature}]]></MsgSignature>
+<TimeStamp>{timestamp}</TimeStamp>
+<Nonce><![CDATA[{nonce}]]></Nonce>
+</xml>"""
+
+        return response_xml
