@@ -43,32 +43,29 @@ class CozeClient:
             logger.error("扣子API配置不完整")
             return "抱歉，服务配置错误"
 
-        # 构建消息列表
-        messages = []
-
-        # 添加历史消息（如果有）
-        if additional_messages:
-            messages.extend(additional_messages)
-
-        # 添加当前消息
-        messages.append({
-            "content": user_input,
-            "content_type": "text",
-            "role": "user",
-            "type": "question"
-        })
-
         # 构建请求参数
         payload = {
             "bot_id": self.bot_id,
             "user_id": user_id,
             "stream": False,  # 非流式响应
-            "additional_messages": messages
+            "additional_messages": [
+                {
+                    "content": user_input,
+                    "content_type": "text",
+                    "role": "user",
+                    "type": "question"
+                }
+            ]
         }
+
+        # 如果有历史消息，添加到前面
+        if additional_messages:
+            payload["additional_messages"] = additional_messages + payload["additional_messages"]
 
         # 发送请求
         try:
             with httpx.Client(timeout=self.timeout) as client:
+                # 使用不同的Authorization header格式
                 response = client.post(
                     self.api_url,
                     json=payload,
@@ -77,20 +74,28 @@ class CozeClient:
                         "Content-Type": "application/json"
                     }
                 )
-                response.raise_for_status()
                 result = response.json()
 
-                logger.info(f"✅ 扣子API调用成功")
+                logger.info(f"✅ 扣子API调用响应: {result}")
+
+                # 检查是否有错误
+                if result.get("code") != 0:
+                    error_msg = result.get("msg", "未知错误")
+                    logger.error(f"❌ 扣子API返回错误: code={result.get('code')}, msg={error_msg}")
+                    return f"抱歉，AI服务错误: {error_msg}"
 
                 # 解析响应，提取AI回复内容
-                if "data" in result and "answer" in result["data"]:
-                    return result["data"]["answer"]
-                elif "messages" in result and len(result["messages"]) > 0:
-                    # 尝试从消息列表中获取最后的助手回复
-                    for msg in reversed(result["messages"]):
+                data = result.get("data", {})
+                if data and "answer" in data:
+                    return data["answer"]
+
+                # 尝试其他可能的字段
+                if "messages" in result:
+                    messages = result["messages"]
+                    for msg in reversed(messages):
                         if msg.get("role") == "assistant" and msg.get("content"):
                             return msg.get("content")
-                
+
                 logger.warning(f"扣子API返回格式异常: {result}")
                 return "抱歉，AI回复格式错误"
 
