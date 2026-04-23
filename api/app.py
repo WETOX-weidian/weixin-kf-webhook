@@ -65,6 +65,14 @@ def verify_weixin():
 
     print(f"[GET] 收到验证请求: echostr={echostr}")
 
+    # 检查是否缺少参数（浏览器直接访问时参数为空）
+    if not all([signature, timestamp, nonce, echostr]):
+        print("[GET] 参数缺失，这不是微信的验证请求")
+        return Response(
+            "此接口仅用于微信服务器验证，请在微信公众平台配置服务器地址",
+            status=400
+        )
+
     if crypto.verify_token(signature, timestamp, nonce):
         print("[GET] 验证成功")
         return Response(echostr, mimetype="text/plain")

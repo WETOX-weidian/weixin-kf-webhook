@@ -36,6 +36,10 @@ class WeixinCrypto:
             True: 验证成功
             False: 验证失败
         """
+        # 检查参数是否为空
+        if not all([signature, timestamp, nonce]):
+            return False
+
         # 排序
         tmp_list = [self.token, timestamp, nonce]
         tmp_list.sort()
