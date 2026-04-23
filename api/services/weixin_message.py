@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-微信客服消息API
+微信小店客服消息API
+根据文档：https://developers.weixin.qq.com/doc/store/shop/API/kf/api_sendmsg.html
 """
 import httpx
 import time
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class WeixinMessage:
-    """微信客服消息客户端"""
+    """微信小店客服消息客户端"""
 
     def __init__(self):
         self.app_id = config.WEIXIN_APP_ID
@@ -22,7 +23,7 @@ class WeixinMessage:
 
     def _get_access_token(self):
         """
-        获取access_token
+        获取access_token（微信小店使用公众号的access_token）
 
         Returns:
             str: access_token
@@ -60,7 +61,7 @@ class WeixinMessage:
 
     def send_text(self, to_user: str, text: str) -> bool:
         """
-        发送文本客服消息
+        发送文本客服消息（微信小店API）
 
         Args:
             to_user: 接收用户的openid
@@ -74,7 +75,8 @@ class WeixinMessage:
             logger.error("无法获取access_token")
             return False
 
-        url = f"{self.base_url}/cgi-bin/message/custom/send?access_token={access_token}"
+        # 使用微信小店客服消息API
+        url = f"{self.base_url}/shop/kf/message/send?access_token={access_token}"
 
         data = {
             "touser": to_user,
