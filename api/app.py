@@ -127,12 +127,15 @@ def handle_weixin_message():
         from_user = None
         user_input = None
 
+        print(f"[POST] 准备解析消息，body是否以{{开头: {body.strip().startswith('{')}")
+
         # 尝试1: 解析为JSON（微信客服消息）
         try:
             import json
             if body.strip().startswith('{'):
                 print("[POST] 尝试解析JSON格式...")
                 json_data = json.loads(body)
+                print(f"[POST] JSON解析成功: {list(json_data.keys())}")
 
                 # 处理客服事件消息
                 if json_data.get('MsgType') == 'event' and json_data.get('Event') == 'commkf_send_msg_to_kf':
@@ -141,8 +144,8 @@ def handle_weixin_message():
                     text_info = json_data.get('text', {})
                     user_input = text_info.get('content', '')
                     print(f"[POST] 检测到客服事件消息，内容: {user_input}")
-        except json.JSONDecodeError:
-            print("[POST] JSON解析失败，尝试XML格式...")
+        except json.JSONDecodeError as e:
+            print(f"[POST] JSON解析失败: {e}, 尝试XML格式...")
 
         # 尝试2: 解析为XML（普通公众号消息）
         if not user_input:
