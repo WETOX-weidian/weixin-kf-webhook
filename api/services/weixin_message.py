@@ -90,15 +90,33 @@ class WeixinMessage:
             response = httpx.post(url, json=data, timeout=10)
             result = response.json()
 
-            if result.get("errcode") == 0:
+            errcode = result.get("errcode")
+            errmsg = result.get("errmsg")
+
+            if errcode == 0:
                 logger.info(f"发送客服消息成功: to_user={to_user}, text={text[:50]}...")
                 return True
             else:
-                logger.error(f"发送客服消息失败: {result}")
+                # 详细的错误日志
+                logger.error(f"发送客服消息失败: errcode={errcode}, errmsg={errmsg}")
+                logger.error(f"完整响应: {result}")
+
+                # 根据错误码给出建议
+                if errcode == 40066:
+                    logger.error("【错误码40066】可能是微信小店未开启自研客服功能")
+                    logger.error("【解决方案】请在微信小店管理后台：店铺管理 → 客服管理 → 接入自研客服")
+                    logger.error("【参考文档】https://developers.weixin.qq.com/doc/store/shop/product/kf/kf_api_guidelines")
+                elif errcode == 48001:
+                    logger.error("【错误码48001】API未授权")
+                    logger.error("【解决方案】请在微信公众平台申请客服消息权限")
+                    logger.error("【参考文档】https://developers.weixin.qq.com/doc/offiaccount/Custom_Menu/Custom_Capability.html")
+
                 return False
 
         except Exception as e:
             logger.error(f"发送客服消息异常: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return False
 
 
