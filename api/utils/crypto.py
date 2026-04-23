@@ -58,7 +58,7 @@ class WeixinCrypto:
         解密微信加密消息
 
         Args:
-            encrypted_xml: 加密的XML
+            encrypted_xml: 加密的消息（可能是JSON或XML）
             msg_signature: 消息签名
             timestamp: 时间戳
             nonce: 随机数
@@ -67,6 +67,7 @@ class WeixinCrypto:
             解密后的XML内容
         """
         import xml.etree.ElementTree as ET
+        import json
 
         try:
             print(f"[decrypt] 收到加密消息，长度: {len(encrypted_xml)}")
@@ -74,24 +75,36 @@ class WeixinCrypto:
 
             encrypt = None
 
-            # 尝试解析XML
+            # 尝试1: 解析JSON格式（新版微信使用JSON）
             try:
-                root = ET.fromstring(encrypted_xml)
-                encrypt_elem = root.find("Encrypt")
-                if encrypt_elem is not None and encrypt_elem.text:
-                    encrypt = encrypt_elem.text
-                    print(f"[decrypt] 从XML中提取到Encrypt，长度: {len(encrypt)}")
-                else:
-                    print(f"[decrypt] XML解析成功但未找到Encrypt标签")
-            except ET.ParseError as e:
-                print(f"[decrypt] XML解析失败: {e}，尝试直接使用整个消息作为加密内容")
+                if encrypted_xml.strip().startswith('{'):
+                    print(f"[decrypt] 尝试解析JSON格式...")
+                    json_data = json.loads(encrypted_xml)
+                    if 'Encrypt' in json_data:
+                        encrypt = json_data['Encrypt']
+                        print(f"[decrypt] 从JSON中提取到Encrypt，长度: {len(encrypt)}")
+            except json.JSONDecodeError:
+                print(f"[decrypt] JSON解析失败，尝试XML格式...")
 
-            # 如果没有从XML中提取到加密内容，直接使用整个消息
+            # 尝试2: 解析XML格式（旧版微信使用XML）
             if not encrypt:
-                encrypt = encrypted_xml
-                print(f"[decrypt] 使用整个消息作为加密内容")
+                try:
+                    root = ET.fromstring(encrypted_xml)
+                    encrypt_elem = root.find("Encrypt")
+                    if encrypt_elem is not None and encrypt_elem.text:
+                        encrypt = encrypt_elem.text
+                        print(f"[decrypt] 从XML中提取到Encrypt，长度: {len(encrypt)}")
+                    else:
+                        print(f"[decrypt] XML解析成功但未找到Encrypt标签")
+                except ET.ParseError as e:
+                    print(f"[decrypt] XML解析失败: {e}")
 
-            print(f"[decrypt] 加密内容长度: {len(encrypt)}")
+            # 如果都没有提取到加密内容，使用整个消息
+            if not encrypt:
+                print(f"[decrypt] 未能从JSON或XML中提取Encrypt，使用整个消息")
+                encrypt = encrypted_xml
+
+            print(f"[decrypt] 最终使用的加密内容长度: {len(encrypt)}")
 
             # 验证签名
             tmp_list = [self.token, timestamp, nonce, encrypt]
