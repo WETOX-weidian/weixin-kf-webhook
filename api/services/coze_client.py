@@ -2,6 +2,7 @@
 扣子工作流API客户端
 """
 import json
+import httpx
 from typing import Optional
 from utils.logger import setup_logger
 
@@ -74,19 +75,19 @@ class CozeClient:
         logger.info(f"用户[{user_id}]消息: {user_input}")
 
         try:
-            # 调用工作流API
-            response = requests.post(
-                self.workflow_url,
-                json={
-                    "input": user_input,
-                    "stream": False
-                },
-                headers={
-                    "Authorization": f"Bearer {self.jwt_token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=60
-            )
+            # 调用工作流API（使用httpx）
+            with httpx.Client(timeout=60) as client:
+                response = client.post(
+                    self.workflow_url,
+                    json={
+                        "input": user_input,
+                        "stream": False
+                    },
+                    headers={
+                        "Authorization": f"Bearer {self.jwt_token}",
+                        "Content-Type": "application/json"
+                    }
+                )
 
             if response.status_code != 200:
                 logger.error(f"工作流API调用失败: {response.status_code} - {response.text}")
@@ -102,7 +103,7 @@ class CozeClient:
             logger.info(f"AI回复: {full_answer[:100]}...")
             return full_answer
 
-        except requests.Timeout:
+        except httpx.TimeoutException:
             logger.error("工作流API调用超时")
             return "抱歉，服务响应超时，请稍后再试。"
         except Exception as e:
