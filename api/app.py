@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # 导入配置和工具
 from utils.crypto import WeixinCrypto
-from services.coze_client import CozeClient
+from services.coze_client import init_coze_client
 from services.weixin_message import weixin_message
 from config import config
 
@@ -36,8 +36,16 @@ crypto = WeixinCrypto(
     app_id=config.WEIXIN_APP_ID or "default_app_id"
 )
 
-# 创建扣子客户端（延迟创建）
-coze = CozeClient()
+# 创建扣子工作流客户端
+if config.COZE_WORKFLOW_URL and config.COZE_JWT_TOKEN:
+    coze = init_coze_client(
+        workflow_url=config.COZE_WORKFLOW_URL,
+        jwt_token=config.COZE_JWT_TOKEN
+    )
+else:
+    print("警告: COZE_WORKFLOW_URL 或 COZE_JWT_TOKEN 未配置，使用默认客户端")
+    from services.coze_client import CozeClient
+    coze = CozeClient("", "")
 
 print("✓ Flask应用启动成功")
 
