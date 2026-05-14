@@ -172,11 +172,14 @@ def handle_weixin_message():
             def async_process():
                 try:
                     print(f"[ASYNC] 开始异步处理消息...")
-                    print(f"[ASYNC] 调用扣子API...")
+                    print(f"[ASYNC] 用户输入: {user_input}")
+                    print(f"[ASYNC] coze对象类型: {type(coze)}")
+                    print(f"[ASYNC] coze.call_chat方法来源: {coze.call_chat}")
+                    print(f"[ASYNC] 调用本地知识库...")
 
                     # 调用AI获取回复
                     ai_response = coze.call_chat(user_input, from_user)
-                    print(f"[ASYNC] 扣子响应: {ai_response}")
+                    print(f"[ASYNC] AI回复: {ai_response}")
 
                     if ai_response:
                         # 尝试发送客服消息
