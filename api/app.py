@@ -36,16 +36,8 @@ crypto = WeixinCrypto(
     app_id=config.WEIXIN_APP_ID or "default_app_id"
 )
 
-# 创建扣子工作流客户端
-if config.COZE_WORKFLOW_URL and config.COZE_JWT_TOKEN:
-    coze = init_coze_client(
-        workflow_url=config.COZE_WORKFLOW_URL,
-        jwt_token=config.COZE_JWT_TOKEN
-    )
-else:
-    print("警告: COZE_WORKFLOW_URL 或 COZE_JWT_TOKEN 未配置，使用默认客户端")
-    from services.coze_client import CozeClient
-    coze = CozeClient("", "")
+# 创建扣子工作流客户端（使用本地知识库）
+coze = init_coze_client()
 
 print("✓ Flask应用启动成功")
 
