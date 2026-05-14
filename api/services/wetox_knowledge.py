@@ -132,7 +132,7 @@ class WetoXKnowledgeBase:
         text_lower = text.lower()
         
         # 检测2代（优先于2mini，因为2mini包含mini）
-        if "唯电宝2代" in text or "v2代" in text_lower:
+        if "唯电宝2代" in text or "v2代" in text_lower or "2代" in text:
             return "2"
         
         # 检测2mini
