@@ -1,0 +1,180 @@
+{
+  "products": {
+    "2mini": {
+      "name": "唯电宝2mini",
+      "type": "便携式直流9孔快充放电枪",
+      "price": {
+        "standard": 1099,
+        "high_power": 1299
+      },
+      "weight": {
+        "standard": "1.7kg",
+        "high_power": "1.9kg"
+      },
+      "features": {
+        "waterproof": false,
+        "tesla_heating": true,
+        "bluetooth": true,
+        "type_c": true
+      },
+      "power": {
+        "standard": {
+          "rated": "3kW",
+          "peak": "3.3kW",
+          "socket_count": 1,
+          "socket_type": "万能插（10A/16A三脚）"
+        },
+        "high_power": {
+          "rated": "5kW",
+          "peak": "6.6kW",
+          "socket_count": 2,
+          "left_socket": "10A五孔（最大2200W）",
+          "right_socket": "16A三孔+10A两孔（最大6600W）"
+        }
+      },
+      "supported_cars": {
+        "tesla": ["Model 3", "Model Y"],
+        "nio": ["NT1.0", "NT1.5", "NT2.0", "NT2.5"],
+        "li_auto": ["2020款理想ONE"],
+        "xiaopeng": ["24款MONA M03"],
+        "gm": ["凯迪拉克锐歌", "凯迪拉克傲歌", "别克E4", "别克E5"],
+        "volvo": ["沃尔沃纯电"],
+        "aion": ["22款AION Y磷酸铁锂版", "21款AION Y磷酸铁锂版"],
+        "leapmotor": ["T03", "C11", "C01"],
+        "wuling": ["缤果系列", "星光系列", "宏光MINIEV系列"],
+        "geely": ["睿蓝", "几何", "熊猫mini"],
+        "toyota": ["bZ4X（有My Room模式）"],
+        "roewe": ["D7", "M7 DMH"]
+      },
+      "unsupported_cars": [
+        "特斯拉Model S/X",
+        "蔚来ET9",
+        "蔚来第三代ES8",
+        "蔚来ES9",
+        "小鹏P7",
+        "小鹏G3",
+        "小鹏G3i",
+        "别克微蓝",
+        "雪佛兰畅巡",
+        "埃安23款以后",
+        "零跑S01",
+        "大众全系",
+        "比亚迪全系",
+        "北汽全系",
+        "长安全系",
+        "威马全系",
+        "极越全系",
+        "欧拉全系",
+        "合创全系",
+        "思皓全系",
+        "奔驰全系",
+        "宝马全系",
+        "奥迪全系",
+        "一汽全系",
+        "红旗全系",
+        "奔腾全系",
+        "江淮全系",
+        "哪吒全系",
+        "东风全系",
+        "奇瑞全系",
+        "路特斯全系",
+        "所有货车/卡车/重卡/面包车"
+      ]
+    },
+    "2gen": {
+      "name": "唯电宝2代",
+      "type": "专业级直流9孔快充放电枪",
+      "price": 2299,
+      "weight": "5kg",
+      "features": {
+        "waterproof": true,
+        "waterproof_level": "IPX5",
+        "rated_power": "4kW",
+        "peak_power": "6kW",
+        "cable_length": "1.4m"
+      },
+      "overload_protection": {
+        "10A": "2.3kW（25℃）",
+        "16A": "3.7kW（25℃）"
+      },
+      "supported_cars": {
+        "tesla": ["Model 3", "Model Y", "Model S（17年后GB/T版）", "Model X（17年后GB/T版）"]
+      }
+    },
+    "ac": {
+      "name": "唯电宝AC",
+      "type": "交流放电枪",
+      "features": {
+        "prerequisite": "原车必须有双向OBC硬件",
+        "cable_length": "5米",
+        "socket_count": "2个10A两孔+2个10A三孔",
+        "waterproof": {
+          "board": "IPX6",
+          "gun": "IP66"
+        },
+        "max_power": "4kW"
+      },
+      "supported_cars": {
+        "byd": ["海鸥", "海豚", "海豹系列", "秦系列", "宋系列", "汉系列", "唐系列", "方程豹系列", "腾势系列", "仰望系列"],
+        "li_auto": ["2021款理想ONE", "L6", "L7", "L8", "L9", "MEGA"],
+        "harmony": ["问界M系列", "智界S系列", "享界S系列", "尊界S系列", "尚界系列"],
+        "xiaopeng": ["P7系列", "G3i", "G6", "G7", "G9", "X9", "MONA M03(25款)"]
+      },
+      "unsupported_cars": [
+        "特斯拉全系",
+        "哪吒全系",
+        "威马全系"
+      ]
+    }
+  },
+  "warranty": {
+    "ac": {
+      "period": "1年",
+      "policy": "只换不修",
+      "after_warranty": "仅收少量材料费与快递费"
+    },
+    "2gen": {
+      "period": "24个月",
+      "after_warranty": "收材料费跟快递费"
+    },
+    "2mini": {
+      "period": "24个月",
+      "after_warranty": "收材料费跟快递费"
+    }
+  },
+  "shipping": {
+    "time": "每天下午4点前付款当天发顺丰陆运",
+    "free_shipping": "中国大部分地区包邮",
+    "special_regions": {
+      "inner_mongolia": "需先支付100元，确认收货后退回",
+      "xinjiang": "需先支付100元，确认收货后退回",
+      "tibet": "需先支付100元，确认收货后退回"
+    },
+    "delivery_time": {
+      "jiangzhe": "次日达",
+      "most": "3天左右",
+      "remote": "3天以上"
+    }
+  },
+  "insurance": {
+    "company": "太平洋保险",
+    "coverage": "10万元/辆",
+    "note": "若因使用唯电宝导致车辆失去质保，保险也会进行理赔"
+  },
+  "hotline": "4006066162",
+  "rules": {
+    "product_inquiry": "必须询问产品型号（2mini/2代/AC）",
+    "car_inquiry": "必须询问车型",
+    "platform_forbidden": "严禁提及其他平台名称",
+    "boundary_forbidden": [
+      "严禁把2mini参数回答给2代用户",
+      "严禁混淆交流和直流支持车型"
+    ],
+    "reply_format": {
+      "max_length": "50字",
+      "max_emoji": 1,
+      "forbidden_list": "严禁使用第一、第二等机械列表",
+      "forbidden_symbols": ["**", "###"]
+    }
+  }
+}
