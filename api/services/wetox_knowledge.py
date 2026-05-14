@@ -335,9 +335,9 @@ class WetoXKnowledgeBase:
             
             # 支持车型问题
             elif any(k in user_input for k in ["支持", "能用", "可以用", "车型"]):
-                if "model" not in context:
-                    response = self.rules["ask_car"]
-                    need_car = True
+                if "product" not in context or not context.get("product"):
+                    response = self.rules["ask_product"]
+                    need_product = True
                 else:
                     response = self._check_car_support(context.get("car", ""), product)
             
@@ -382,7 +382,7 @@ class WetoXKnowledgeBase:
                     response = "亲，唯电宝AC需要原车自带交流外放电功能才能使用呢，请问您的车是哪款呀？"
                     need_car = True
                 else:
-                    response = f"亲，唯电宝{self.products[product]['name']}还有哪些想了解的呢？"
+                    response = f"亲，{self.products[product]['name']}还有哪些想了解的呢？"
         
         return {
             "response": response,
@@ -402,12 +402,12 @@ class WetoXKnowledgeBase:
         # 特斯拉特殊处理
         if "特斯拉" in car or "model" in car_lower:
             if "model 3" in car_lower or "model3" in car_lower or "model y" in car_lower or "modely" in car_lower:
-                return f"亲，{car}全系都可以使用唯电宝{product_info['name']}的呢～"
+                return f"亲，{car}全系都可以使用{product_info['name']}的呢～"
             elif "model s" in car_lower or "models" in car_lower or "model x" in car_lower or "modelx" in car_lower:
                 if product == "2":
                     return f"亲，{car}（17年后国标GB/T版）可以使用唯电宝2代呢～"
                 else:
-                    return f"亲，抱歉，唯电宝{product_info['name']}不支持Model S/X呢～"
+                    return f"亲，抱歉，{product_info['name']}不支持Model S/X呢～"
         
         # 比亚迪处理
         if "比亚迪" in car or "汉" in car or "唐" in car or "秦" in car or "海豹" in car or "海鸥" in car or "海豚" in car or "宋" in car:
@@ -420,34 +420,120 @@ class WetoXKnowledgeBase:
         if "蔚来" in car or "es" in car_lower or "et" in car_lower or "ec" in car_lower:
             if product in ["2mini", "2"]:
                 if "et9" in car_lower or ("es8" in car_lower and "第三代" in car) or "es9" in car_lower:
-                    return f"亲，抱歉，唯电宝{product_info['name']}暂不支持{car}呢～"
+                    return f"亲，抱歉，{product_info['name']}暂不支持{car}呢～"
                 else:
-                    return f"亲，{car}可以使用唯电宝{product_info['name']}的呢～"
+                    return f"亲，{car}可以使用{product_info['name']}的呢～"
         
         # 理想处理
         if "理想" in car or "one" in car_lower:
             if "one" in car_lower or "理想one" in car_lower or "2020款理想one" in car_lower:
                 if product in ["2mini", "2"]:
-                    return f"亲，{car}可以使用唯电宝{product_info['name']}的呢～"
+                    return f"亲，{car}可以使用{product_info['name']}的呢～"
             elif product in ["2mini", "2"]:
-                return f"亲，抱歉，唯电宝{product_info['name']}仅支持2020款理想ONE呢～"
+                return f"亲，抱歉，{product_info['name']}仅支持2020款理想ONE呢～"
+        
+        # 小鹏处理
+        if "小鹏" in car or "mona" in car_lower or "p7" in car_lower or "g9" in car_lower or "g6" in car_lower or "g3" in car_lower:
+            if "mona" in car_lower or "03" in car or "m03" in car_lower:
+                # MONA M03 不同年份不同支持
+                if "2025款" in car or "25款" in car:
+                    if product == "AC":
+                        return f"亲，2025款MONA M03可以使用唯电宝AC呢～"
+                    else:
+                        return f"亲，抱歉，{product_info['name']}不支持2025款MONA M03呢～（2025款需要用AC）"
+                elif "2024款" in car or "24款" in car:
+                    if product in ["2mini", "2"]:
+                        return f"亲，2024款MONA M03可以使用{product_info['name']}呢～"
+                    else:
+                        return f"亲，抱歉，唯电宝AC不支持2024款MONA M03呢～"
+                else:
+                    # 未指定年份，需要询问
+                    return "亲，小鹏MONA M03不同年份支持的唯电宝不一样呢～请问您是2024款还是2025款呀？"
+            elif "p7" in car_lower or "g9" in car_lower or "g6" in car_lower or "g3" in car_lower:
+                if product == "AC":
+                    return f"亲，{car}可以使用唯电宝AC呢～"
+                else:
+                    return f"亲，抱歉，{product_info['name']}不支持{car}呢～（小鹏P7/G9/G6/G3需要用AC）"
         
         # 通用回复
-        return f"亲，关于{car}是否支持，唯电宝{product_info['name']}支持的车型比较复杂，您可以拨打{self.rules['hotline']}确认一下哦～"
+        return f"亲，关于{car}是否支持，{product_info['name']}支持的车型比较复杂，您可以拨打{self.rules['hotline']}确认一下哦～"
     
     def _detect_car(self, text: str) -> Optional[str]:
         """从用户输入中检测车型"""
+        import re
+        
+        # 定义车型模式
+        car_patterns = [
+            # 特斯拉
+            r"(特斯拉\s*)?(model\s*[3yxs]|model3|modely|models|modelx)",
+            # 比亚迪系列
+            r"(比亚迪\s*)?(汉[拉]?[DMS]?|唐[DM]?|秦[PLUS]?[DMI]?|海[豹鸥豚]|宋[PLUS]?|元[PLUS]?)",
+            # 蔚来
+            r"(蔚来\s*)?(es[3698125]+|et[579]+|ec[67]+|el[89]?)",
+            # 理想
+            r"(理想\s*)?(one|[lm][6789]|mega)",
+            # 小鹏（年份 + 小鹏 + 车型）
+            r"((\d{4}款|\d{2}款)\s*)?(小鹏\s*)?(mona\s*m03|monam03|p7[+]?|g[369]\d?|x9)",
+            # 问界/智界等
+            r"(问界|智界|享界|尊界)\s*[mse]\d+",
+            # 岚图
+            r"(岚图\s*)?(free|梦想家|追光)",
+            # 零跑
+            r"(零跑\s*)?([tcz]\d+|c\d+|b\d+)",
+            # 埃安/广汽
+            r"(埃安|广汽)\s*[a-z]*\s*v?\d*|aion\s*[syxvr]\d*",
+            # 五菱
+            r"(五菱\s*)?(缤果|宏光\s*mini|星光|云朵|悦也)",
+            # 其他
+            r"(吉利|极氪|领克|长安|长城|欧拉|奇瑞|哪吒|威马|沃尔沃|凯迪拉克|别克)",
+        ]
+        
+        text_lower = text.lower()
+        
+        for pattern in car_patterns:
+            match = re.search(pattern, text_lower, re.IGNORECASE)
+            if match:
+                # 提取匹配的部分
+                full_match = match.group(0)
+                
+                # 小鹏特殊处理：检查是否有年份前缀
+                if "小鹏" in full_match.lower() or "mona" in full_match or "p7" in full_match or "g" in full_match:
+                    # 如果有捕获年份组，使用年份+车型
+                    if match.lastindex and match.lastindex >= 1:
+                        year_prefix = match.group(1)
+                        if year_prefix:
+                            # 年份 + 匹配部分（避免重复）
+                            if year_prefix not in full_match:
+                                return f"{year_prefix}{full_match}".strip()
+                            return full_match.strip()
+                    # 如果没有年份但有"小鹏"前缀，返回原匹配
+                    if "小鹏" in full_match:
+                        return full_match.strip()
+                    # 如果没有年份前缀但匹配到了车型名，返回原匹配
+                    return full_match.strip()
+                
+                # 其他车型直接返回
+                car = full_match.strip()
+                if len(car) >= 2:
+                    return car
+        
+        # 如果没匹配到，检查关键词
         car_keywords = [
-            "特斯拉", "model", "比亚迪", "汉", "唐", "秦", "海豹", "海鸥", "海豚", "宋",
-            "蔚来", "es", "et", "理想", "one", "小鹏", "p7", "g9", "g6",
-            "问界", "智界", "享界", "尊界", "岚图", "零跑", "哪吒", "威马",
-            "埃安", "aion", "五菱", "宝骏", "吉利", "极氪", "领克", "长安",
-            "长城", "欧拉", "哈佛", "奇瑞", "红旗", "奔腾"
+            "特斯拉", "比亚迪", "蔚来", "理想", "小鹏", "问界", "智界", 
+            "享界", "岚图", "零跑", "哪吒", "埃安", "五菱", "宝骏", 
+            "吉利", "极氪", "领克", "长安", "长城", "欧拉", "奇瑞"
         ]
         
         for keyword in car_keywords:
-            if keyword.lower() in text.lower():
-                return text
+            if keyword in text:
+                # 返回包含关键词及其后面内容的部分
+                idx = text.find(keyword)
+                # 提取关键词及后面最多20个字符
+                car = text[idx:idx+20].strip()
+                # 去掉句尾的标点
+                car = car.rstrip('，。！？、')
+                return car
+        
         return None
 
 
