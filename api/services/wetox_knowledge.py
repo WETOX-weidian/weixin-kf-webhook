@@ -203,6 +203,15 @@ class WetoXKnowledgeBase:
                 "context_update": {}
             }
         
+        # 发链接问题
+        if any(k in user_input for k in ["链接", "连接", "网址", "商品链接", "购买链接"]):
+            return {
+                "response": "亲，这边没法直接发链接，您可以进店自己找一下需要的正确商品哦～",
+                "need_product": False,
+                "need_car": False,
+                "context_update": {}
+            }
+        
         # 车型检测 - 如果用户提到车型，先问产品
         if self._detect_car(user_input) and not current_product:
             response = f"亲，{user_input}可以搭配我们的唯电宝2mini或2代使用呢～请问您想咨询哪款产品呀？"
@@ -350,6 +359,10 @@ class WetoXKnowledgeBase:
             # 优惠问题
             elif any(k in user_input for k in ["优惠", "便宜", "打折", "活动"]):
                 response = "亲，唯电宝全系不议价、无小礼品哦～"
+            
+            # 发链接问题
+            elif any(k in user_input for k in ["链接", "连接", "地址", "网址", "商品链接", "购买链接"]):
+                response = "亲，这边没法直接发链接，您可以进店自己找一下需要的正确商品哦～"
             
             # 退货问题
             elif any(k in user_input for k in ["退货", "七天", "无理由"]):
